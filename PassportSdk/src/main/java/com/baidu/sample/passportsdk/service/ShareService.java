@@ -1,9 +1,7 @@
 package com.baidu.sample.passportsdk.service;
 
-import com.baidu.sample.passportsdk.model.ShareEvent;
-import com.baidu.sample.passportsdk.model.ShareModel;
 import com.baidu.sample.passportsdk.ShareManager;
-import com.baidu.sample.passportsdk.utils.MLog;
+import com.baidu.sample.passportsdk.model.ShareModel;
 
 import android.app.Service;
 import android.content.Intent;
@@ -37,10 +35,8 @@ public class ShareService extends Service {
 
             switch (shareModel.getEvent().ordinal()) {
                 case 0://pull
-                    reply.writeSerializable(ShareEvent.ACK);
-                    reply.writeString(getPackageName());
-                    MLog.d("我是Service，收到pull消息：" + shareModel.getData());
-                    noticePullListener();
+                    ShareModel replyShareModel = getPullReply();
+                    replyShareModel.writeToParcel(reply,0);
                     break;
                 case 1://push
                     noticePushListener(shareModel);
@@ -63,16 +59,12 @@ public class ShareService extends Service {
         });
     }
 
-    private void noticePullListener() {
-        //回调消息放到主线程
-        mHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (ShareManager.getInstance().getReceivePullLis() != null) {
-                    ShareManager.getInstance().getReceivePullLis().onReceivePullEvent();
-                }
-            }
-        });
+    private ShareModel getPullReply() {
+        ShareModel shareModel = null;
+        if (ShareManager.getInstance().getReceivePullLis() != null) {
+            shareModel = ShareManager.getInstance().getReceivePullLis().onReceivePullEvent();
+        }
+        return shareModel;
     }
 }
 

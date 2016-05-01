@@ -1,18 +1,25 @@
 package com.baidu.sample.passportsdk;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import com.baidu.sample.passportsdk.callback.OnPackageUtilsGetIntentListener;
 import com.baidu.sample.passportsdk.callback.OnPullResultListener;
 import com.baidu.sample.passportsdk.callback.OnReceivePullEventListener;
 import com.baidu.sample.passportsdk.callback.OnReceivePushEventListener;
-import com.baidu.sample.passportsdk.model.ShareEvent;
 import com.baidu.sample.passportsdk.model.ShareModel;
 import com.baidu.sample.passportsdk.utils.MLog;
-import com.baidu.sample.passportsdk.utils.PackageUtils;
 
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.pm.ServiceInfo;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -23,6 +30,8 @@ import android.os.RemoteException;
  * Created by liuzhenhui on 15/8/8.
  */
 public class ShareManager {
+    public static final String SERVICE_ACTION = "me.intent.action.account.SHARE_SERVICE";
+
     private Context mContext;
     private OnReceivePushEventListener mReceivePushLis = null;
     private OnReceivePullEventListener mReceivePullLis = null;
@@ -32,7 +41,6 @@ public class ShareManager {
 
     private static class LazyHolder {
         private static final ShareManager INSTANCE = new ShareManager();
-
     }
 
     public static final ShareManager getInstance() {
@@ -42,39 +50,27 @@ public class ShareManager {
     public void init(Context context, OnReceivePushEventListener pushEventListener,
                      OnReceivePullEventListener pullEventListener) {
         mContext = context;
-        initUtils(context);
         mReceivePushLis = pushEventListener;
         mReceivePullLis = pullEventListener;
-    }
-
-    public void initUtils(Context context) {
-        PackageUtils.init(context);
-        MLog.init(context);
+        MLog.init(mContext);
     }
 
     public void pushMessage(ShareModel msg) {
-        pushRemote(msg);
+        HandlerThread pushThread = new HandlerThread("PushThread");
+        pushThread.start();
+        Handler pushHandler = new Handler(pushThread.getLooper());
+        pushHandler.post(new PushRunnable(pushHandler, msg));
     }
 
     public void pullMessage(OnPullResultListener pullResultListener) {
-        pullRemote(pullResultListener);
-    }
-
-    public OnReceivePullEventListener getReceivePullLis() {
-        return mReceivePullLis;
-    }
-
-    public OnReceivePushEventListener getReceiveShareLis() {
-        return mReceivePushLis;
-    }
-    public void pullRemote(OnPullResultListener resultListener) {
         HandlerThread pullThread = new HandlerThread("PullThread");
         pullThread.start();
         Handler pullHandler = new Handler(pullThread.getLooper());
-        pullHandler.post(new PullRunnable(pullHandler, resultListener));
+        pullHandler.post(new PullRunnable(pullHandler, pullResultListener));
     }
 
     class PullRunnable implements Runnable {
+
         Handler pullHandler;
         OnPullResultListener resultListener;
 
@@ -85,22 +81,22 @@ public class ShareManager {
 
         @Override
         public void run() {
-            PackageUtils.getAllSharedAppIntent(getIntentListener, false);
+            callAllApps(getIntentListener, false);
         }
 
         OnPackageUtilsGetIntentListener getIntentListener = new OnPackageUtilsGetIntentListener() {
+
             @Override
-            public void intentSuccess(Intent intent) {
+            public void onGetIntentSuccess(Intent intent) {
                 mContext.bindService(intent, new MyServiceConnection(), Context.BIND_AUTO_CREATE);
             }
 
             class MyServiceConnection implements ServiceConnection {
 
-
                 @Override
                 public void onServiceConnected(ComponentName name, IBinder mIBinder) {
                     MLog.d("bind Service连接建立成功");
-                    final ServiceConnection connection = this;
+                    ServiceConnection connection = this;
                     pullHandler.post(new ServiceConnectedRunnable(mIBinder, connection));
                 }
 
@@ -123,7 +119,8 @@ public class ShareManager {
                         try {
                             Parcel data = Parcel.obtain();
                             Parcel reply = Parcel.obtain();
-                            ShareModel pullData = new ShareModel(ShareEvent.PULL, "This is a PullEvent from " + mContext.getPackageName());
+                            ShareModel pullData = new ShareModel(
+                                    ShareModel.ShareEvent.PULL, "This is a PullEvent from " + mContext.getPackageName());
                             pullData.writeToParcel(data, 0);
                             boolean result = mIBinder.transact(0, data, reply, 0);
                             if (result) {
@@ -140,23 +137,12 @@ public class ShareManager {
                 }
             }
         };
-    }
 
-    /**
-     * 向其他共享SDK应用共享消息
-     *
-     * @param shareMsg
-     */
-    public void pushRemote(ShareModel shareMsg) {
-        HandlerThread pushThread = new HandlerThread("PushThread");
-        pushThread.start();
-        Handler pushHandler = new Handler(pushThread.getLooper());
-        pushHandler.post(new PushRunnable(pushHandler, shareMsg));
     }
 
     class PushRunnable implements Runnable {
-        Handler pushHandler;
-        ShareModel pushData;
+        private Handler pushHandler;
+        private ShareModel pushData;
 
         public PushRunnable(Handler pushHandler, ShareModel msg) {
             this.pushHandler = pushHandler;
@@ -165,12 +151,13 @@ public class ShareManager {
 
         @Override
         public void run() {
-            PackageUtils.getAllSharedAppIntent(getIntentListener, false);
+            callAllApps(getIntentListener, false);
         }
 
         OnPackageUtilsGetIntentListener getIntentListener = new OnPackageUtilsGetIntentListener() {
+
             @Override
-            public void intentSuccess(Intent intent) {
+            public void onGetIntentSuccess(Intent intent) {
                 mContext.bindService(intent, new MyServiceConnection(), Context.BIND_AUTO_CREATE);
             }
 
@@ -218,5 +205,58 @@ public class ShareManager {
                 }
             }
         };
+    }
+
+    public void callAllApps(OnPackageUtilsGetIntentListener callback, boolean includeMyselfe) {
+        Map appsIntentMap = getAllAppsIntent(includeMyselfe);
+        Iterator iterator = appsIntentMap.values().iterator();
+        while (iterator.hasNext()) {
+            Intent intent = (Intent) iterator.next();
+            if (intent != null) {
+                callback.onGetIntentSuccess(intent);
+            }
+        }
+    }
+
+    private Map<String, Intent> getAllAppsIntent(boolean includeMyselfe) {
+        HashMap serviceMap = new HashMap();
+        List packageList = mContext.getPackageManager().
+                queryIntentServices(new Intent(SERVICE_ACTION), PackageManager.GET_INTENT_FILTERS);
+        MLog.d("查询到内置了SDK的应用个数为：" + packageList.size());
+        if (packageList != null) {
+            Iterator iterator = packageList.iterator();
+            ServiceInfo serviceInfo;
+            ResolveInfo resolveInfo;
+            Intent intent;
+            do {
+                do {
+                    resolveInfo = (ResolveInfo) iterator.next();
+                    serviceInfo = resolveInfo.serviceInfo;
+                } while (serviceInfo == null);
+                if (!includeMyselfe && serviceInfo.packageName.equals(mContext.getPackageName())) {
+                    continue;
+                }
+                intent = new Intent(SERVICE_ACTION);
+                intent.setClassName(serviceInfo.packageName, serviceInfo.name);
+                if (Build.VERSION.SDK_INT > 11) {
+                    intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+                }
+                serviceMap.put(serviceInfo.packageName, intent);
+            }
+            while (iterator.hasNext());
+
+        } else {
+            MLog.d("本机没有安装内置Passport SDK的应用");
+        }
+        MLog.d("成功获取到启动应用的intent个数：" + serviceMap.size());
+        return serviceMap;
+    }
+
+    public OnReceivePullEventListener getReceivePullLis() {
+        return mReceivePullLis;
+    }
+
+    public OnReceivePushEventListener getReceiveShareLis() {
+        return mReceivePushLis;
     }
 }

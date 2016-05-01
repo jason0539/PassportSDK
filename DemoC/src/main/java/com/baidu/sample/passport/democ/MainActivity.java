@@ -1,9 +1,13 @@
 package com.baidu.sample.passport.democ;
 
-import android.support.v7.app.AppCompatActivity;
+import com.baidu.sample.passportsdk.ShareManager;
+import com.baidu.sample.passportsdk.callback.OnReceivePullEventListener;
+import com.baidu.sample.passportsdk.callback.OnReceivePushEventListener;
+import com.baidu.sample.passportsdk.model.ShareModel;
+import com.baidu.sample.passportsdk.utils.MLog;
+
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.support.v7.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -11,27 +15,27 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        initPassportSDK();
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
+    private void initPassportSDK() {
+        ShareManager.getInstance().init(this, pushEventLis, pullEventLis);
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+    OnReceivePullEventListener pullEventLis = new OnReceivePullEventListener() {
+        @Override
+        public ShareModel onReceivePullEvent() {
+            MLog.d("我是DemoC，收到pull消息");
+            ShareModel shareModel = new ShareModel(ShareModel.ShareEvent.ACK, "我是C，我回应了Pull消息");
+            return shareModel;
         }
+    };
 
-        return super.onOptionsItemSelected(item);
-    }
+    OnReceivePushEventListener pushEventLis = new OnReceivePushEventListener() {
+        @Override
+        public void onReceivePushEvent(ShareModel shareModel) {
+            MLog.d("我是DemoC，收到push消息：" + shareModel.getData());
+        }
+    };
+
 }

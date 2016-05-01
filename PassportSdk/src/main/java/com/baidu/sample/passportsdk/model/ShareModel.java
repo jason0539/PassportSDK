@@ -58,4 +58,10 @@ public class ShareModel implements Parcelable {
         dest.writeSerializable(event);
         dest.writeString(data);
     }
+
+    public enum ShareEvent {
+        PULL,
+        PUSH,
+        ACK
+    }
 }
