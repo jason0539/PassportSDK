@@ -1,8 +1,9 @@
-package com.baidu.sample.passportsdk.share;
+package com.baidu.sample.passportsdk;
 
-import com.baidu.sample.passportsdk.AccountManager;
 import com.baidu.sample.passportsdk.callback.OnPackageUtilsGetIntentListener;
 import com.baidu.sample.passportsdk.callback.OnPullResultListener;
+import com.baidu.sample.passportsdk.callback.OnReceivePullEventListener;
+import com.baidu.sample.passportsdk.callback.OnReceivePushEventListener;
 import com.baidu.sample.passportsdk.model.ShareEvent;
 import com.baidu.sample.passportsdk.model.ShareModel;
 import com.baidu.sample.passportsdk.utils.MLog;
@@ -23,11 +24,49 @@ import android.os.RemoteException;
  */
 public class ShareManager {
     private Context mContext;
+    private OnReceivePushEventListener mReceivePushLis = null;
+    private OnReceivePullEventListener mReceivePullLis = null;
 
-    public ShareManager() {
-        mContext = AccountManager.getInstance().getContext();
+    private ShareManager() {
     }
 
+    private static class LazyHolder {
+        private static final ShareManager INSTANCE = new ShareManager();
+
+    }
+
+    public static final ShareManager getInstance() {
+        return LazyHolder.INSTANCE;
+    }
+
+    public void init(Context context, OnReceivePushEventListener pushEventListener,
+                     OnReceivePullEventListener pullEventListener) {
+        mContext = context;
+        initUtils(context);
+        mReceivePushLis = pushEventListener;
+        mReceivePullLis = pullEventListener;
+    }
+
+    public void initUtils(Context context) {
+        PackageUtils.init(context);
+        MLog.init(context);
+    }
+
+    public void pushMessage(ShareModel msg) {
+        pushRemote(msg);
+    }
+
+    public void pullMessage(OnPullResultListener pullResultListener) {
+        pullRemote(pullResultListener);
+    }
+
+    public OnReceivePullEventListener getReceivePullLis() {
+        return mReceivePullLis;
+    }
+
+    public OnReceivePushEventListener getReceiveShareLis() {
+        return mReceivePushLis;
+    }
     public void pullRemote(OnPullResultListener resultListener) {
         HandlerThread pullThread = new HandlerThread("PullThread");
         pullThread.start();

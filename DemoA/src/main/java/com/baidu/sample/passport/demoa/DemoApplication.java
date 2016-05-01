@@ -1,12 +1,12 @@
 package com.baidu.sample.passport.demoa;
 
-import android.app.Application;
-
-import com.baidu.sample.passportsdk.AccountManager;
 import com.baidu.sample.passportsdk.callback.OnReceivePullEventListener;
 import com.baidu.sample.passportsdk.callback.OnReceivePushEventListener;
 import com.baidu.sample.passportsdk.model.ShareModel;
+import com.baidu.sample.passportsdk.ShareManager;
 import com.baidu.sample.passportsdk.utils.MLog;
+
+import android.app.Application;
 
 /**
  * Created by liuzhenhui on 15/8/8.下午9:43
@@ -21,7 +21,7 @@ public class DemoApplication extends Application {
     }
 
     private void initPassportSDK() {
-        AccountManager.getInstance().init(this, pushEventLis, pullEventLis);
+        ShareManager.getInstance().init(this, pushEventLis, pullEventLis);
 
     }
 

@@ -1,7 +1,6 @@
 package com.baidu.sample.passportsdk.utils;
 
-import com.baidu.sample.passportsdk.AccountManager;
-
+import android.content.Context;
 import android.util.Log;
 
 /**
@@ -9,18 +8,23 @@ import android.util.Log;
  */
 public class MLog {
     public static boolean isDebug = true;
+    public static String packageName;
+
+    public static void init(Context context) {
+        packageName = context.getPackageName();
+    }
 
     public static void d(String s) {
         if (!isDebug) {
             return;
         }
-        Log.d("lzh", AccountManager.getInstance().getContext().getPackageName() + "======>" + s);
+        Log.d("lzh", packageName + "======>" + s);
     }
 
     public static void e(String s) {
         if (!isDebug) {
             return;
         }
-        Log.e("lzh", AccountManager.getInstance().getContext().getPackageName() + "======>" + s);
+        Log.e("lzh", packageName + "======>" + s);
     }
 }

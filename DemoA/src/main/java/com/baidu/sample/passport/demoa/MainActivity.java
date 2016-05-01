@@ -1,9 +1,9 @@
 package com.baidu.sample.passport.demoa;
 
-import com.baidu.sample.passportsdk.AccountManager;
 import com.baidu.sample.passportsdk.callback.OnPullResultListener;
 import com.baidu.sample.passportsdk.model.ShareEvent;
 import com.baidu.sample.passportsdk.model.ShareModel;
+import com.baidu.sample.passportsdk.ShareManager;
 import com.baidu.sample.passportsdk.utils.MLog;
 
 import android.app.Activity;
@@ -33,7 +33,7 @@ public class MainActivity extends Activity {
                 switch (v.getId()) {
                     case R.id.bn_pull:
                         Log.d("lzh", "pull");
-                        AccountManager.getInstance().pullMessage(new OnPullResultListener() {
+                        ShareManager.getInstance().pullMessage(new OnPullResultListener() {
                             @Override
                             public void onSuccess(ShareModel shareModel) {
                                 MLog.d("我是Demo A，收到pull的回应" + shareModel.getData());
@@ -41,7 +41,7 @@ public class MainActivity extends Activity {
                         });
                         break;
                     case R.id.bn_push:
-                        AccountManager.getInstance().pushMessage(new ShareModel(ShareEvent.PUSH, "我是Demo A，我发出Push"));
+                        ShareManager.getInstance().pushMessage(new ShareModel(ShareEvent.PUSH, "我是Demo A，我发出Push"));
                         break;
                 }
 

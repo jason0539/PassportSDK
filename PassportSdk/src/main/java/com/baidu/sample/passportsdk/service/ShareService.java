@@ -1,8 +1,8 @@
 package com.baidu.sample.passportsdk.service;
 
-import com.baidu.sample.passportsdk.AccountManager;
 import com.baidu.sample.passportsdk.model.ShareEvent;
 import com.baidu.sample.passportsdk.model.ShareModel;
+import com.baidu.sample.passportsdk.ShareManager;
 import com.baidu.sample.passportsdk.utils.MLog;
 
 import android.app.Service;
@@ -38,7 +38,7 @@ public class ShareService extends Service {
             switch (shareModel.getEvent().ordinal()) {
                 case 0://pull
                     reply.writeSerializable(ShareEvent.ACK);
-                    reply.writeString(AccountManager.getInstance().getContext().getPackageName());
+                    reply.writeString(getPackageName());
                     MLog.d("我是Service，收到pull消息：" + shareModel.getData());
                     noticePullListener();
                     break;
@@ -56,8 +56,8 @@ public class ShareService extends Service {
         mHandler.post(new Runnable() {
             @Override
             public void run() {
-                if (AccountManager.getInstance().getReceiveShareLis() != null) {
-                    AccountManager.getInstance().getReceiveShareLis().onReceivePushEvent(shareModel);
+                if (ShareManager.getInstance().getReceiveShareLis() != null) {
+                    ShareManager.getInstance().getReceiveShareLis().onReceivePushEvent(shareModel);
                 }
             }
         });
@@ -68,8 +68,8 @@ public class ShareService extends Service {
         mHandler.post(new Runnable() {
             @Override
             public void run() {
-                if (AccountManager.getInstance().getReceivePullLis() != null) {
-                    AccountManager.getInstance().getReceivePullLis().onReceivePullEvent();
+                if (ShareManager.getInstance().getReceivePullLis() != null) {
+                    ShareManager.getInstance().getReceivePullLis().onReceivePullEvent();
                 }
             }
         });

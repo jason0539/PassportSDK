@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.baidu.sample.passportsdk.AccountManager;
 import com.baidu.sample.passportsdk.callback.OnPackageUtilsGetIntentListener;
 
 import android.content.Context;
@@ -20,7 +19,11 @@ import android.os.Build;
  */
 public class PackageUtils {
     public static final String SERVICE_ACTION = "me.intent.action.account.SHARE_SERVICE";
+    public static Context mContext;
 
+    public static final void init(Context context) {
+        mContext = context;
+    }
 
     /**
      * 获取植入共享SDK的所有应用对应服务的启动intent
@@ -47,20 +50,19 @@ public class PackageUtils {
      */
     private static Map<String, Intent> getPackageIntent(boolean includeMyselfe) {
         HashMap serviceMap = new HashMap();
-        List packageList = AccountManager.getInstance().getContext().getPackageManager().queryIntentServices(new Intent(SERVICE_ACTION), PackageManager.GET_INTENT_FILTERS);
+        List packageList = mContext.getPackageManager().queryIntentServices(new Intent(SERVICE_ACTION), PackageManager.GET_INTENT_FILTERS);
         MLog.d("获取到包个数" + packageList.size());
         if (packageList != null) {
             Iterator iterator = packageList.iterator();
             ServiceInfo serviceInfo;
             ResolveInfo resolveInfo;
             Intent intent;
-            Context context = AccountManager.getInstance().getContext();
             do {
                 do {
                     resolveInfo = (ResolveInfo) iterator.next();
                     serviceInfo = resolveInfo.serviceInfo;
                 } while (serviceInfo == null);
-                if (!includeMyselfe && serviceInfo.packageName.equals(context.getPackageName())) {
+                if (!includeMyselfe && serviceInfo.packageName.equals(mContext.getPackageName())) {
                     continue;
                 }
                 intent = new Intent(SERVICE_ACTION);
@@ -73,7 +75,6 @@ public class PackageUtils {
 //            while (!TextUtils.isEmpty(serviceInfo.permission) && context.checkCallingOrSelfPermission(serviceInfo.permission) != PackageManager.PERMISSION_GRANTED);
             while (iterator.hasNext());
 
-            context = null;
         } else {
             MLog.d("getPackageIntent 获取到的包为空");
         }
